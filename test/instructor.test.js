@@ -8,10 +8,39 @@ const port = 18081;
 const url = `http://127.0.0.1:${port}`;
 const emit = (socket, event, payload) => new Promise(resolve => socket.emit(event, payload, resolve));
 const connected = socket => new Promise((resolve, reject) => { socket.once('connect', resolve); socket.once('connect_error', reject); });
+const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+
+function nextState(socket, predicate, timeout = 1500) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      socket.off('instructor:state', onState);
+      reject(new Error('Timed out waiting for instructor state.'));
+    }, timeout);
+    function onState(state) {
+      if (!predicate(state)) return;
+      clearTimeout(timer);
+      socket.off('instructor:state', onState);
+      resolve(state);
+    }
+    socket.on('instructor:state', onState);
+  });
+}
+
+async function actionAndState(socket, payload, predicate) {
+  const statePromise = nextState(socket, predicate);
+  const answer = await emit(socket, 'instructor:action', payload);
+  assert.equal(answer.ok, true);
+  return statePromise;
+}
 
 test('instructor policies are enforced server-side', async t => {
   const server = spawn(process.execPath, ['server/server.js'], { env: { ...process.env, PORT: String(port), INSTRUCTOR_PIN: 'test-pin' }, stdio: ['ignore', 'pipe', 'pipe'] });
-  await new Promise((resolve, reject) => { server.stdout.on('data', data => String(data).includes('listening') && resolve()); server.once('exit', code => reject(new Error(`server exited ${code}`))); });
+  await new Promise((resolve, reject) => {
+    let stderr = '';
+    server.stderr.on('data', data => { stderr += data; });
+    server.stdout.on('data', data => String(data).includes('listening') && resolve());
+    server.once('exit', code => reject(new Error(`server exited ${code}: ${stderr.trim()}`)));
+  });
   t.after(() => server.kill('SIGTERM'));
   const instructor = io(url), studentA = io(url), studentB = io(url);
   t.after(() => { instructor.close(); studentA.close(); studentB.close(); });
@@ -29,5 +58,44 @@ test('instructor policies are enforced server-side', async t => {
   assert.match((await emit(studentB, 'cw:key', { down: true, wpm: 20 })).reason, /reserved/);
   await emit(instructor, 'instructor:action', { action: 'mute', channel: 'CLASS', target: a.client.id, value: true });
   assert.match((await emit(studentA, 'cw:key', { down: true, wpm: 20 })).reason, /muted/);
+
+  let state = await actionAndState(
+    instructor,
+    { action: 'tone', channel: 'CLASS', value: 5000 },
+    value => value.channels.find(room => room.channel === 'CLASS')?.policy.toneFrequency === 1200
+  );
+  let policy = state.channels.find(room => room.channel === 'CLASS').policy;
+  assert.equal(policy.toneFrequency, 1200, 'tone frequency is clamped to the supported range');
+
+  state = await actionAndState(
+    instructor,
+    { action: 'waveform', channel: 'CLASS', value: 'sawtooth' },
+    value => value.channels.find(room => room.channel === 'CLASS')?.policy.toneWaveform === 'sine'
+  );
+  policy = state.channels.find(room => room.channel === 'CLASS').policy;
+  assert.equal(policy.toneWaveform, 'sine', 'unsupported waveforms fall back to sine');
+
+  state = await actionAndState(
+    instructor,
+    { action: 'mode', channel: 'CLASS', value: 'straight' },
+    value => value.channels.find(room => room.channel === 'CLASS')?.policy.mandatoryMode === 'straight'
+  );
+  policy = state.channels.find(room => room.channel === 'CLASS').policy;
+  assert.equal(policy.mandatoryMode, 'straight');
+
+  await emit(instructor, 'instructor:action', { action: 'mute', channel: 'CLASS', target: a.client.id, value: false });
+  await emit(instructor, 'instructor:action', { action: 'reserve', channel: 'CLASS', target: '' });
+  await emit(instructor, 'instructor:action', { action: 'wpm', channel: 'CLASS', value: 60 });
+  assert.equal((await emit(studentA, 'cw:key', { down: true })).ok, true);
+  await delay(10);
+  const decoded = nextState(instructor, value => value.channels
+    .find(room => room.channel === 'CLASS')?.operators
+    .find(operator => operator.id === a.client.id)?.text === 'E');
+  assert.equal((await emit(studentA, 'cw:key', { down: false })).ok, true);
+  state = await decoded;
+  const operator = state.channels.find(room => room.channel === 'CLASS').operators.find(item => item.id === a.client.id);
+  assert.equal(operator.code, '.');
+  assert.equal(operator.text, 'E');
+
   assert.equal((await emit(instructor, 'instructor:action', { action: 'close', channel: 'CLASS' })).ok, true);
 });
