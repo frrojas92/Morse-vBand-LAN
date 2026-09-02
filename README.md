@@ -3,11 +3,10 @@
 [![Node.js >= 20](https://img.shields.io/badge/Node.js-%3E%3D20-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Socket.IO 4.8](https://img.shields.io/badge/Socket.IO-4.8-010101?logo=socket.io&logoColor=white)](https://socket.io/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
-[![Último commit](https://img.shields.io/github/last-commit/frrojas92/Morse-vBand-LAN?logo=github)](https://github.com/frrojas92/Morse-vBand-LAN/commits/main)
-[![Tamaño del repositorio](https://img.shields.io/github/repo-size/frrojas92/Morse-vBand-LAN)](https://github.com/frrojas92/Morse-vBand-LAN)
-[![Licencia no especificada](https://img.shields.io/badge/licencia-no_especificada-red)](#licencia)
 
-Aplicación local para prácticas de telegrafía CW con varios operadores. Funciona dentro de una red LAN y no necesita conexión a Internet durante su ejecución.
+![Morse-vBand-LAN: manipulador CW conectado a equipos de una red local](assets/morse-vband-lan-banner.png)
+
+Contenedor Docker ideado para prácticas de telegrafía CW con varios operadores. Funciona dentro de una red LAN y no necesita conexión a Internet durante su ejecución.
 
 Cada navegador convierte las entradas del manipulador en eventos CW. El servidor coordina los canales, controla el transmisor y distribuye los eventos mediante Socket.IO. El audio se genera localmente con WebAudio; no se transmite ni se graba audio.
 
