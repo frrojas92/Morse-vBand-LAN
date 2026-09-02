@@ -15,7 +15,7 @@ const MORSE = {
 function ensure(name) {
   if (!channels.has(name)) channels.set(name, {
     name, members: new Set(), transmitter: null, releaseTimer: null,
-    locked: false, receiveOnly: false, mandatoryWpm: 20, mandatoryMode: null,
+    locked: false, receiveOnly: false, mandatoryWpm: 15, mandatoryMode: null,
     toneFrequency: 700, toneWaveform: 'sine', decodeText: true, decodeCode: true,
     exercise: '', reservedFor: null, muted: new Set(), decoderDisabled: new Set(), activity: new Map(), logs: [], persistent: false
   });

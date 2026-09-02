@@ -8,7 +8,7 @@ const $ = (selector) => document.querySelector(selector);
 let joined = false;
 let clientId = null;
 let transmissionAllowed = true;
-let currentWpm = 20;
+let currentWpm = 15;
 let currentChannel = '';
 let remoteAudioQueue = Promise.resolve();
 

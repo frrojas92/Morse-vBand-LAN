@@ -4,7 +4,7 @@ export class CwKeyer {
   constructor(onKey) {
     this.onKey = onKey;
     this.mode = 'iambic-b';
-    this.wpm = 20;
+    this.wpm = 15;
     this.paddles = { dit: false, dah: false };
     this.memory = { dit: false, dah: false };
     this.running = false;
