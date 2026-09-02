@@ -1,0 +1,11 @@
+services:
+  morse-vband-lan:
+    build: .
+    container_name: morse-vband-lan
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      INSTRUCTOR_PIN: "${INSTRUCTOR_PIN:-morse-admin}"

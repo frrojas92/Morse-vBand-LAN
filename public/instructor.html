@@ -1,0 +1,6 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Instructor · Morse vBand LAN</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/instructor.css"><link rel="stylesheet" href="/features.css"></head><body><main>
+<header><p class="eyebrow">CONTROL DESK</p><h1>Instructor <span>Mode</span></h1><p>Manage live CW training channels.</p></header>
+<section class="panel" id="loginPanel"><form id="loginForm"><fieldset><legend>Instructor login</legend><label>Instructor PIN<input id="pin" type="password" required autocomplete="current-password"></label><button>Open control desk</button></fieldset></form><div id="status">Use the PIN configured on the server.</div></section>
+<section id="desk" hidden><section class="panel create"><form id="createForm"><label>New channel<input id="newChannel" maxlength="24" placeholder="CLASS-A" required></label><button>Create channel</button></form></section><div id="rooms"></div></section>
+<footer>Instructor state is held in memory and resets when the server restarts. <a href="/">Operator view</a></footer>
+</main><script src="/socket.io/socket.io.js"></script><script type="module" src="/instructor.js"></script></body></html>

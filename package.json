@@ -1,0 +1,1 @@
+{"name":"morse-vband-lan","version":"0.1.0","private":true,"description":"LAN CW training with local WebAudio sidetone","main":"server/server.js","scripts":{"start":"node server/server.js","test":"node --test"},"engines":{"node":">=20"},"dependencies":{"express":"5.2.1","socket.io":"4.8.1"},"devDependencies":{"socket.io-client":"4.8.1"}}

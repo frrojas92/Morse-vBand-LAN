@@ -1,0 +1,20 @@
+.controlled { color: var(--muted); line-height: 1.7; }
+.controlled b { color: var(--amber); }
+.decoder { margin-top: 18px; }
+.decoder h2 { margin-top: 0; }
+.decode-row { padding: 12px 0; border-top: 1px solid var(--line); }
+.decode-row h3 { margin: 0 0 8px; color: var(--green); font-size: .8rem; }
+.decode-row p, .decode-row code { display: block; margin: 5px 0; overflow-wrap: anywhere; }
+.decoded-text { font-size: 1.25rem; color: var(--text); }
+.decode-row code, .instructor-decode code { color: var(--amber); }
+.decoder-switches { display: flex; gap: 20px; margin: 16px 0; }
+.decoder-switches label { display: flex; align-items: center; gap: 8px; }
+.decoder-switches input { width: auto; }
+.operator-admin > div { grid-template-columns: minmax(120px, 1fr) minmax(180px, 2fr) auto auto auto; }
+.operator-admin span, .operator-admin small, .instructor-decode { display: grid; }
+.instructor-decode { gap: 5px; overflow-wrap: anywhere; }
+.instructor-decode strong { font-size: 1.05rem; }
+@media (max-width: 650px) {
+  .operator-admin > div { grid-template-columns: 1fr 1fr; }
+  .instructor-decode { grid-column: 1 / -1; }
+}
