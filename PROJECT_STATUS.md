@@ -20,6 +20,9 @@ Morse-vBand-LAN is an offline-first Node.js and Socket.IO application for multi-
 - Server-side per-operator Morse decoding to plain text and dot-dash notation.
 - Instructor switches for independently displaying decoded text and dot-dash code.
 - TX/RX decoder views in the student portal and per-operator decoder output in the instructor portal.
+- Live channel directories in both portals with duplicate-name rejection for instructor-created channels.
+- Downloadable in-memory CSV logs for rooms and individual operators, including Morse, decoded text, callsign, direction, WPM, mode, tone settings, and key duration.
+- Simplified black interface using green and red status accents.
 - Docker image and Compose deployment on TCP port 8080.
 
 ## Important files
@@ -35,7 +38,7 @@ Morse-vBand-LAN is an offline-first Node.js and Socket.IO application for multi-
 
 ## Validation at checkpoint
 
-- `npm test`: passing (1 integration test).
+- `npm test`: passing (integration coverage includes policies, decoding, logging, and duplicate channel names).
 - JavaScript syntax checks: passing.
 - Git whitespace check: passing.
 - Decoder timing smoke check: a dot decodes to `E`.
@@ -55,4 +58,4 @@ Hard-refresh instructor and student browsers after rebuilding so cached JavaScri
 
 - Test sustained CW on the target phone over both Wi-Fi and Ethernet and tune the audio envelope if clicks remain.
 - Verify decoder word spacing across the intended WPM range and with real paddle technique.
-- Expand automated coverage for tone policies and decoder output.
+- Verify downloaded CSV logs against longer real-world sessions and intended spreadsheet software.

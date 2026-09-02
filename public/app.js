@@ -9,6 +9,7 @@ let joined = false;
 let clientId = null;
 let transmissionAllowed = true;
 let currentWpm = 20;
+let currentChannel = '';
 
 const keyer = new CwKeyer(async (down) => {
   if (down && !transmissionAllowed) return setStatus('Transmission disabled by instructor.', 'error');
@@ -19,6 +20,19 @@ const keyer = new CwKeyer(async (down) => {
 });
 
 function setStatus(message, kind = '') { $('#status').textContent = message; $('#status').className = kind; }
+function safeFilename(value) { return value.replace(/[^A-Z0-9_-]/gi, '_'); }
+function downloadCsv(entries, filename) {
+  const columns = ['timestamp', 'channel', 'direction', 'callsign', 'morse', 'text', 'wpm', 'mode', 'toneFrequency', 'toneWaveform', 'keyDurationMs'];
+  const quote = value => `"${String(value ?? '').replaceAll('"', '""')}"`;
+  const csv = [columns.join(','), ...entries.map(entry => columns.map(column => quote(entry[column])).join(','))].join('\n');
+  const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); link.download = filename; link.click(); URL.revokeObjectURL(link.href);
+}
+function requestLog(target, label) {
+  socket.emit('logs:get', { channel: currentChannel, target }, answer => {
+    if (!answer?.ok) return setStatus(answer?.reason || 'Log download failed.', 'error');
+    downloadCsv(answer.entries, `${safeFilename(currentChannel)}-${label}-log.csv`);
+  });
+}
 function configure() {
   keyer.configure($('#mode').value, currentWpm);
 }
@@ -62,12 +76,14 @@ $('#joinForm').addEventListener('submit', async (event) => {
   await localAudio.unlock(); await remoteAudio.unlock();
   socket.emit('room:join', { callsign: $('#callsign').value, channel: $('#channel').value }, (answer) => {
     joined = Boolean(answer?.ok);
-    if (joined) { clientId = answer.client.id; $('#station').disabled = true; setStatus(`Connected to ${answer.client.channel}`, 'ok'); applyState(answer.state); }
+    if (joined) { clientId = answer.client.id; currentChannel = answer.client.channel; $('#station').disabled = true; $('#downloadMyLog').disabled = false; $('#downloadRoomLog').disabled = false; setStatus(`Connected to ${answer.client.channel}`, 'ok'); applyState(answer.state); }
     else setStatus(answer?.reason || 'Unable to join channel.', 'error');
   });
 });
 
 $('#mode').addEventListener('input', configure);
+$('#downloadMyLog').addEventListener('click', () => requestLog(clientId, safeFilename($('#callsign').value || 'operator')));
+$('#downloadRoomLog').addEventListener('click', () => requestLog('', 'room'));
 configure();
 
 const paddleFor = (event) => event.code === 'ControlLeft' ? 'dit' : event.code === 'ControlRight' ? 'dah' : null;
@@ -88,6 +104,15 @@ window.addEventListener('keyup', (event) => {
 window.addEventListener('blur', () => { keyer.releaseAll(); document.querySelectorAll('.paddle').forEach(el => el.classList.remove('active')); });
 
 socket.on('room:state', applyState);
+socket.on('room:list', rooms => {
+  $('#roomList').replaceChildren(...(rooms.length ? rooms.map(room => {
+    const li = document.createElement('li');
+    const button = document.createElement('button'); button.type = 'button'; button.disabled = room.locked || joined;
+    button.textContent = room.name; button.onclick = () => { $('#channel').value = room.name; $('#callsign').focus(); };
+    const detail = document.createElement('span'); detail.textContent = `${room.operators} operator${room.operators === 1 ? '' : 's'}${room.locked ? ' · locked' : ''}`;
+    li.append(button, detail); return li;
+  }) : [Object.assign(document.createElement('li'), { className: 'muted', textContent: 'No active channels' })]));
+});
 socket.on('cw:key', ({ down }) => down ? remoteAudio.keyDown() : remoteAudio.keyUp());
-socket.on('room:closed', () => { joined = false; clientId = null; keyer.releaseAll(); localAudio.keyUp(); remoteAudio.keyUp(); $('#station').disabled = false; setStatus('The instructor closed this channel.', 'error'); });
-socket.on('disconnect', () => { joined = false; remoteAudio.keyUp(); $('#station').disabled = false; setStatus('Disconnected. Rejoin when the server is available.', 'error'); });
+socket.on('room:closed', () => { joined = false; clientId = null; currentChannel = ''; keyer.releaseAll(); localAudio.keyUp(); remoteAudio.keyUp(); $('#station').disabled = false; $('#downloadMyLog').disabled = true; $('#downloadRoomLog').disabled = true; setStatus('Channel closed.', 'error'); });
+socket.on('disconnect', () => { joined = false; currentChannel = ''; remoteAudio.keyUp(); $('#station').disabled = false; $('#downloadMyLog').disabled = true; $('#downloadRoomLog').disabled = true; setStatus('Disconnected.', 'error'); });

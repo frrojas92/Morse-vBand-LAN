@@ -36,11 +36,13 @@ Then open `http://localhost:8080`.
 ## MVP behavior
 
 - Callsigns and rooms live only in memory and disappear on restart.
+- Active rooms are listed in both student and instructor views. Duplicate room names are rejected.
 - Rooms are independent; presence and current-transmitter state are room scoped.
 - Half-duplex is enforced by a per-room server lock. It is released after a short post-element hang time or immediately on disconnect.
 - Iambic A, Iambic B, and straight-key modes are timed in the originating browser. WPM is enforced per room by the instructor.
 - Tone frequency and sine/triangle/square waveform are enforced per room by the instructor.
 - The server decodes each operator independently. The instructor can show or hide decoded text and dot-dash code in both instructor and student views.
+- Students can download their own log or the current room log as CSV. Instructors can download room and per-operator CSV logs. Rows include timestamp, TX/RX direction, callsign, Morse, decoded text, WPM, keyer mode, tone settings, and key duration.
 - The browser may require the Join button gesture before WebAudio is allowed to play.
 - No audio is recorded or sent over the network. Socket.IO carries key-down/key-up and room-state events only.
 - Instructor Mode can create/close/lock rooms, enforce WPM, tone, waveform, and keyer mode, control decoder visibility, assign exercises, switch students to receive-only, reserve or clear the transmitter, mute/disconnect operators, and monitor key activity.

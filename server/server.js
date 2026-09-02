@@ -40,6 +40,8 @@ function roomState(channel) {
 }
 
 function instructorState() { return { channels: channels.list().map(room => roomState(room.name)).filter(Boolean) }; }
+function roomDirectory() { return channels.list().map(room => ({ name: room.name, operators: room.members.size, locked: room.locked })); }
+function publishDirectory() { io.emit('room:list', roomDirectory()); }
 function publishInstructor() { io.to('__instructors').emit('instructor:state', instructorState()); }
 function publish(channel) { const state = roomState(channel); if (state) io.to(channel).emit('room:state', state); publishInstructor(); }
 function validPin(pin) { const a = Buffer.from(String(pin || '')); const b = Buffer.from(INSTRUCTOR_PIN); return a.length === b.length && crypto.timingSafeEqual(a, b); }
@@ -52,6 +54,7 @@ function stopTransmission(channel) {
 }
 
 io.on('connection', (socket) => {
+  socket.emit('room:list', roomDirectory());
   socket.on('room:join', (payload = {}, reply = () => {}) => {
     const requestedChannel = normalizeChannel(payload.channel) || 'LOBBY';
     if (!channels.canJoin(requestedChannel)) return reply({ ok: false, reason: 'This channel is locked.' });
@@ -65,7 +68,24 @@ io.on('connection', (socket) => {
     socket.join(client.channel);
     channels.join(client.channel, socket.id);
     publish(client.channel);
+    publishDirectory();
     reply({ ok: true, client, state: roomState(client.channel) });
+  });
+
+  socket.on('logs:get', (payload = {}, reply = () => {}) => {
+    const requester = clients.get(socket.id);
+    const isInstructor = instructors.has(socket.id);
+    const channel = normalizeChannel(payload.channel || requester?.channel);
+    if (!channel || (!isInstructor && requester?.channel !== channel)) return reply({ ok: false, reason: 'Join this channel first.' });
+    const target = String(payload.target || '');
+    if (target && !isInstructor && target !== socket.id) return reply({ ok: false, reason: 'You can only download your own operator log.' });
+    const entries = channels.logs(channel, target || null).map(entry => ({
+      timestamp: entry.timestamp, channel, direction: entry.socketId === socket.id ? 'TX' : 'RX',
+      callsign: entry.callsign || clients.get(entry.socketId)?.callsign || 'UNKNOWN', morse: entry.morse,
+      text: entry.text, wpm: entry.wpm, mode: entry.mode, toneFrequency: entry.toneFrequency,
+      toneWaveform: entry.toneWaveform, keyDurationMs: entry.keyDurationMs
+    }));
+    reply({ ok: true, entries });
   });
 
   socket.on('cw:key', (payload = {}, reply = () => {}) => {
@@ -78,7 +98,7 @@ io.on('connection', (socket) => {
       const acquired = channels.acquire(client.channel, socket.id);
       if (!acquired.ok) return reply(acquired);
     } else if (room.transmitter !== socket.id) return reply({ ok: false, reason: 'You do not own the transmitter.' });
-    channels.recordKey(client.channel, socket.id, down, wpm, () => publish(client.channel));
+    channels.recordKey(client.channel, socket.id, down, wpm, () => publish(client.channel), client.callsign);
     const event = { down, callsign: client.callsign, senderId: socket.id, at: Date.now() };
     socket.to(client.channel).emit('cw:key', event);
     if (down) publish(client.channel);
@@ -98,11 +118,13 @@ io.on('connection', (socket) => {
     const room = channels.get(channel);
     const target = String(payload.target || '');
     switch (payload.action) {
-      case 'create': channels.create(channel); break;
+      case 'create':
+        if (room) return reply({ ok: false, reason: `Channel ${channel} already exists.` });
+        channels.create(channel); break;
       case 'close':
         stopTransmission(channel);
         for (const id of channels.close(channel)) { io.to(id).emit('room:closed', { channel }); io.sockets.sockets.get(id)?.leave(channel); clients.remove(id); }
-        publishInstructor(); return reply({ ok: true });
+        publishInstructor(); publishDirectory(); return reply({ ok: true });
       case 'lock': channels.setPolicy(channel, { locked: Boolean(payload.value) }); break;
       case 'receiveOnly': stopTransmission(channel); channels.setPolicy(channel, { receiveOnly: Boolean(payload.value) }); break;
       case 'exercise': channels.setPolicy(channel, { exercise: String(payload.value || '').slice(0, 500) }); break;
@@ -122,7 +144,7 @@ io.on('connection', (socket) => {
       case 'clear': stopTransmission(channel); channels.setPolicy(channel, { reservedFor: null }); break;
       default: return reply({ ok: false, reason: 'Unknown instructor action.' });
     }
-    publish(channel); reply({ ok: true });
+    publish(channel); publishDirectory(); reply({ ok: true });
   });
 
   socket.on('disconnect', () => {
@@ -132,6 +154,7 @@ io.on('connection', (socket) => {
     const wasTransmitting = channels.leave(client.channel, socket.id);
     if (wasTransmitting) socket.to(client.channel).emit('cw:key', { down: false, callsign: client.callsign, at: Date.now() });
     publish(client.channel);
+    publishDirectory();
   });
 });
 

@@ -17,7 +17,7 @@ function ensure(name) {
     name, members: new Set(), transmitter: null, releaseTimer: null,
     locked: false, receiveOnly: false, mandatoryWpm: 20, mandatoryMode: null,
     toneFrequency: 700, toneWaveform: 'sine', decodeText: true, decodeCode: true,
-    exercise: '', reservedFor: null, muted: new Set(), activity: new Map(), persistent: false
+    exercise: '', reservedFor: null, muted: new Set(), activity: new Map(), logs: [], persistent: false
   });
   return channels.get(name);
 }
@@ -63,7 +63,7 @@ function decoder(room, socketId) {
   return room.activity.get(socketId);
 }
 
-function recordKey(name, socketId, down, wpm, onUpdate) {
+function recordKey(name, socketId, down, wpm, onUpdate, callsign = '') {
   const room = get(name);
   if (!room) return;
   const state = decoder(room, socketId);
@@ -80,9 +80,15 @@ function recordKey(name, socketId, down, wpm, onUpdate) {
   onUpdate();
   state.letterTimer = setTimeout(() => {
     if (!state.currentCode) return;
+    const morse = state.currentCode;
+    const text = MORSE[morse] || '?';
     state.code = `${state.code}${state.code && !state.code.endsWith(' / ') ? ' ' : ''}${state.currentCode}`.slice(-500);
-    state.text = `${state.text}${MORSE[state.currentCode] || '?'}`.slice(-250);
+    state.text = `${state.text}${text}`.slice(-250);
     state.currentCode = '';
+    room.logs.push({ timestamp: new Date().toISOString(), socketId, callsign, morse, text, wpm,
+      mode: room.mandatoryMode || 'student-choice', toneFrequency: room.toneFrequency,
+      toneWaveform: room.toneWaveform, keyDurationMs: duration });
+    if (room.logs.length > 10000) room.logs.splice(0, room.logs.length - 10000);
     onUpdate();
   }, Math.round(ditMs * 2));
   state.wordTimer = setTimeout(() => {
@@ -129,5 +135,6 @@ function canJoin(name) { return !get(name)?.locked; }
 function setPolicy(name, changes) { const room = create(name); Object.assign(room, changes); return room; }
 function setMuted(name, socketId, muted) { const room = ensure(name); muted ? room.muted.add(socketId) : room.muted.delete(socketId); }
 function close(name) { const room = get(name); if (!room) return []; clearTimeout(room.releaseTimer); for (const state of room.activity.values()) { clearTimeout(state.letterTimer); clearTimeout(state.wordTimer); } channels.delete(name); return [...room.members]; }
+function logs(name, socketId = null) { const room = get(name); return room ? room.logs.filter(entry => !socketId || entry.socketId === socketId) : []; }
 
-module.exports = { ensure, get, list, create, canJoin, join, leave, close, acquire, scheduleRelease, release, members, transmitter, setPolicy, setMuted, recordKey };
+module.exports = { ensure, get, list, create, canJoin, join, leave, close, acquire, scheduleRelease, release, members, transmitter, setPolicy, setMuted, recordKey, logs };

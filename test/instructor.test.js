@@ -97,5 +97,15 @@ test('instructor policies are enforced server-side', async t => {
   assert.equal(operator.code, '.');
   assert.equal(operator.text, 'E');
 
+  const roomLog = await emit(studentA, 'logs:get', { channel: 'CLASS' });
+  assert.equal(roomLog.ok, true);
+  assert.deepEqual(roomLog.entries.at(-1), {
+    timestamp: roomLog.entries.at(-1).timestamp, channel: 'CLASS', direction: 'TX', callsign: 'A1AA',
+    morse: '.', text: 'E', wpm: 60, mode: 'straight', toneFrequency: 1200,
+    toneWaveform: 'sine', keyDurationMs: roomLog.entries.at(-1).keyDurationMs
+  });
+  assert.equal((await emit(studentB, 'logs:get', { channel: 'CLASS', target: a.client.id })).ok, false);
+  assert.match((await emit(instructor, 'instructor:action', { action: 'create', channel: 'CLASS' })).reason, /already exists/);
+
   assert.equal((await emit(instructor, 'instructor:action', { action: 'close', channel: 'CLASS' })).ok, true);
 });
