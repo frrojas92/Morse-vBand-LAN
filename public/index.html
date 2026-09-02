@@ -1,19 +1,19 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Morse vBand LAN</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/instructor.css"><link rel="stylesheet" href="/features.css"></head>
 <body>
   <main>
     <header><h1>Morse <span>vBand</span> LAN</h1></header>
-    <section class="panel room-directory"><h2>Channels</h2><ul id="roomList"><li class="muted">No active channels</li></ul></section>
+    <section class="panel room-directory"><h2>Canales</h2><ul id="roomList"><li class="muted">No hay canales activos</li></ul></section>
     <section class="panel">
-      <form id="joinForm"><fieldset id="station"><legend>Station</legend><label>Callsign<input id="callsign" maxlength="16" placeholder="CE3ABC" required autocomplete="off"></label><label>Channel<input id="channel" maxlength="24" value="LOBBY" required autocomplete="off"></label><button>Join</button></fieldset></form>
-      <div id="status">Not connected</div>
+      <form id="joinForm"><fieldset id="station"><legend>Estación</legend><label>Indicativo<input id="callsign" maxlength="16" placeholder="CE3ABC" required autocomplete="off"></label><label>Canal<input id="channel" maxlength="24" value="LOBBY" required autocomplete="off"></label><button>Ingresar</button></fieldset></form>
+      <div id="status">Sin conexión</div>
     </section>
-    <section id="exercisePanel" class="panel exercise" hidden><h2>Instructor exercise</h2><p id="exercise"></p></section>
+    <section id="exercisePanel" class="panel exercise" hidden><h2>Ejercicio del instructor</h2><p id="exercise"></p></section>
     <section class="grid">
-      <div class="panel controls"><h2>Keyer</h2><label>Mode<select id="mode"><option value="iambic-a">Iambic A</option><option value="iambic-b" selected>Iambic B</option><option value="straight">Straight key</option></select></label><p class="controlled">Instructor settings · <b id="wpmValue">20</b> WPM · <b id="frequencyValue">700</b> Hz · <b id="waveformValue">sine</b></p><div class="paddles"><div id="ditLamp" class="paddle"><b>DIT</b><small>Left Ctrl</small></div><div id="dahLamp" class="paddle"><b>DAH</b><small>Right Ctrl</small></div></div></div>
-      <div class="panel channel"><h2>Channel</h2><div id="transmitter">Channel clear</div><h3>Operators</h3><ul id="operators"><li class="muted">No operators</li></ul><div class="log-actions"><button id="downloadMyLog" type="button" disabled>Download my log</button><button id="downloadRoomLog" type="button" disabled>Download room log</button></div></div>
+      <div class="panel controls"><h2>Manipulador</h2><label>Modo<select id="mode"><option value="iambic-a">Iámbico A</option><option value="iambic-b" selected>Iámbico B</option><option value="straight">Llave vertical</option></select></label><p class="controlled">Configuración del instructor · <b id="wpmValue">20</b> PPM · <b id="frequencyValue">700</b> Hz · <b id="waveformValue">senoidal</b></p><div class="paddles"><div id="ditLamp" class="paddle"><b>DIT</b><small>Ctrl izquierdo</small></div><div id="dahLamp" class="paddle"><b>DAH</b><small>Ctrl derecho</small></div></div></div>
+      <div class="panel channel"><h2>Canal</h2><div id="transmitter">Canal libre</div><h3>Operadores</h3><ul id="operators" class="operator-list"><li class="muted">No hay operadores</li></ul><div class="log-actions"><button id="downloadRoomTxt" type="button" disabled>Registro del canal · TXT</button><button id="downloadRoomCsv" type="button" disabled>Registro del canal · CSV</button></div></div>
     </section>
-    <section id="decoderPanel" class="panel decoder" hidden><h2>Live decoder</h2><div id="decoders"></div></section>
+    <section id="decoderPanel" class="panel decoder" hidden><h2>Decodificador en vivo</h2><div id="decoders"></div></section>
   </main><script src="/socket.io/socket.io.js"></script><script type="module" src="/app.js"></script>
 </body></html>

@@ -26,6 +26,17 @@ function nextState(socket, predicate, timeout = 1500) {
   });
 }
 
+function nextEvent(socket, event, predicate, timeout = 1500) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => { socket.off(event, onEvent); reject(new Error(`Timed out waiting for ${event}.`)); }, timeout);
+    function onEvent(payload) {
+      if (!predicate(payload)) return;
+      clearTimeout(timer); socket.off(event, onEvent); resolve(payload);
+    }
+    socket.on(event, onEvent);
+  });
+}
+
 async function actionAndState(socket, payload, predicate) {
   const statePromise = nextState(socket, predicate);
   const answer = await emit(socket, 'instructor:action', payload);
@@ -51,13 +62,23 @@ test('instructor policies are enforced server-side', async t => {
   const a = await emit(studentA, 'room:join', { callsign: 'A1AA', channel: 'CLASS' });
   const b = await emit(studentB, 'room:join', { callsign: 'B2BB', channel: 'CLASS' });
   assert.ok(a.ok && b.ok);
+  assert.deepEqual(a.state.instructors.map(item => item.callsign), ['INSTRUCTOR']);
+  let decoderState = await actionAndState(
+    instructor,
+    { action: 'studentDecoder', channel: 'CLASS', target: a.client.id, value: false },
+    value => value.channels.find(room => room.channel === 'CLASS')?.operators.find(operator => operator.id === a.client.id)?.decoderEnabled === false
+  );
+  const decoderOperators = decoderState.channels.find(room => room.channel === 'CLASS').operators;
+  assert.equal(decoderOperators.find(operator => operator.id === a.client.id).decoderEnabled, false);
+  assert.equal(decoderOperators.find(operator => operator.id === b.client.id).decoderEnabled, true);
+  await emit(instructor, 'instructor:action', { action: 'studentDecoder', channel: 'CLASS', target: a.client.id, value: true });
   await emit(instructor, 'instructor:action', { action: 'receiveOnly', channel: 'CLASS', value: true });
-  assert.match((await emit(studentA, 'cw:key', { down: true, wpm: 20 })).reason, /receive-only/);
+  assert.match((await emit(studentA, 'cw:key', { down: true, wpm: 20 })).reason, /recepción/);
   await emit(instructor, 'instructor:action', { action: 'receiveOnly', channel: 'CLASS', value: false });
   await emit(instructor, 'instructor:action', { action: 'reserve', channel: 'CLASS', target: a.client.id });
-  assert.match((await emit(studentB, 'cw:key', { down: true, wpm: 20 })).reason, /reserved/);
+  assert.match((await emit(studentB, 'cw:key', { down: true, wpm: 20 })).reason, /reservado/);
   await emit(instructor, 'instructor:action', { action: 'mute', channel: 'CLASS', target: a.client.id, value: true });
-  assert.match((await emit(studentA, 'cw:key', { down: true, wpm: 20 })).reason, /muted/);
+  assert.match((await emit(studentA, 'cw:key', { down: true, wpm: 20 })).reason, /silenció/);
 
   let state = await actionAndState(
     instructor,
@@ -86,12 +107,14 @@ test('instructor policies are enforced server-side', async t => {
   await emit(instructor, 'instructor:action', { action: 'mute', channel: 'CLASS', target: a.client.id, value: false });
   await emit(instructor, 'instructor:action', { action: 'reserve', channel: 'CLASS', target: '' });
   await emit(instructor, 'instructor:action', { action: 'wpm', channel: 'CLASS', value: 60 });
+  const remoteElement = nextEvent(studentB, 'cw:key', event => !event.down);
   assert.equal((await emit(studentA, 'cw:key', { down: true })).ok, true);
   await delay(10);
   const decoded = nextState(instructor, value => value.channels
     .find(room => room.channel === 'CLASS')?.operators
     .find(operator => operator.id === a.client.id)?.text === 'E');
   assert.equal((await emit(studentA, 'cw:key', { down: false })).ok, true);
+  assert.ok((await remoteElement).durationMs > 0, 'receivers get the measured element duration');
   state = await decoded;
   const operator = state.channels.find(room => room.channel === 'CLASS').operators.find(item => item.id === a.client.id);
   assert.equal(operator.code, '.');
@@ -104,8 +127,10 @@ test('instructor policies are enforced server-side', async t => {
     morse: '.', text: 'E', wpm: 60, mode: 'straight', toneFrequency: 1200,
     toneWaveform: 'sine', keyDurationMs: roomLog.entries.at(-1).keyDurationMs
   });
-  assert.equal((await emit(studentB, 'logs:get', { channel: 'CLASS', target: a.client.id })).ok, false);
-  assert.match((await emit(instructor, 'instructor:action', { action: 'create', channel: 'CLASS' })).reason, /already exists/);
+  const operatorLog = await emit(studentB, 'logs:get', { channel: 'CLASS', target: a.client.id });
+  assert.equal(operatorLog.ok, true, 'room members can download each operator log');
+  assert.equal(operatorLog.entries.at(-1).callsign, 'A1AA');
+  assert.match((await emit(instructor, 'instructor:action', { action: 'create', channel: 'CLASS' })).reason, /ya existe/);
 
   assert.equal((await emit(instructor, 'instructor:action', { action: 'close', channel: 'CLASS' })).ok, true);
 });

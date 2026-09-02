@@ -10,27 +10,30 @@ let clientId = null;
 let transmissionAllowed = true;
 let currentWpm = 20;
 let currentChannel = '';
+let remoteAudioQueue = Promise.resolve();
 
 const keyer = new CwKeyer(async (down) => {
-  if (down && !transmissionAllowed) return setStatus('Transmission disabled by instructor.', 'error');
+  if (down && !transmissionAllowed) return setStatus('Transmisión desactivada por el instructor.', 'error');
   if (down) await localAudio.keyDown(); else localAudio.keyUp();
   if (joined) socket.emit('cw:key', { down }, (answer) => {
-    if (!answer?.ok) { localAudio.keyUp(); setStatus(answer?.reason || 'Transmission rejected.', 'error'); }
+    if (!answer?.ok) { localAudio.keyUp(); setStatus(answer?.reason || 'Transmisión rechazada.', 'error'); }
   });
 });
 
 function setStatus(message, kind = '') { $('#status').textContent = message; $('#status').className = kind; }
 function safeFilename(value) { return value.replace(/[^A-Z0-9_-]/gi, '_'); }
-function downloadCsv(entries, filename) {
+function downloadLog(entries, filename, format) {
   const columns = ['timestamp', 'channel', 'direction', 'callsign', 'morse', 'text', 'wpm', 'mode', 'toneFrequency', 'toneWaveform', 'keyDurationMs'];
   const quote = value => `"${String(value ?? '').replaceAll('"', '""')}"`;
-  const csv = [columns.join(','), ...entries.map(entry => columns.map(column => quote(entry[column])).join(','))].join('\n');
-  const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); link.download = filename; link.click(); URL.revokeObjectURL(link.href);
+  const content = format === 'csv'
+    ? [columns.join(','), ...entries.map(entry => columns.map(column => quote(entry[column])).join(','))].join('\n')
+    : entries.map(entry => `[${entry.timestamp}] ${entry.direction} ${entry.callsign} | ${entry.morse} | ${entry.text} | ${entry.wpm} WPM | ${entry.mode} | ${entry.toneFrequency} Hz ${entry.toneWaveform} | ${entry.keyDurationMs} ms`).join('\n');
+  const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([content], { type: format === 'csv' ? 'text/csv' : 'text/plain' })); link.download = filename; link.click(); URL.revokeObjectURL(link.href);
 }
-function requestLog(target, label) {
+function requestLog(target, label, format) {
   socket.emit('logs:get', { channel: currentChannel, target }, answer => {
-    if (!answer?.ok) return setStatus(answer?.reason || 'Log download failed.', 'error');
-    downloadCsv(answer.entries, `${safeFilename(currentChannel)}-${label}-log.csv`);
+    if (!answer?.ok) return setStatus(answer?.reason || 'No se pudo descargar el registro.', 'error');
+    downloadLog(answer.entries, `${safeFilename(currentChannel)}-${label}-log.${format}`, format);
   });
 }
 function configure() {
@@ -38,7 +41,8 @@ function configure() {
 }
 
 function renderDecoders(state) {
-  const enabled = state.policy.decodeText || state.policy.decodeCode;
+  const me = state.operators.find(operator => operator.id === clientId);
+  const enabled = me?.decoderEnabled !== false && (state.policy.decodeText || state.policy.decodeCode);
   $('#decoderPanel').hidden = !enabled;
   if (!enabled) return;
   $('#decoders').replaceChildren(...state.operators.map(operator => {
@@ -51,22 +55,31 @@ function renderDecoders(state) {
 }
 
 function applyState(state) {
-  $('#operators').replaceChildren(...state.operators.map(operator => {
-    const li = document.createElement('li'); li.textContent = operator.callsign; return li;
-  }));
-  $('#transmitter').textContent = state.transmitter || 'Channel clear';
+  const operatorRows = state.operators.map(operator => {
+    const li = document.createElement('li'); const name = document.createElement('span'); name.textContent = operator.callsign;
+    const actions = document.createElement('span'); actions.className = 'operator-log-actions';
+    for (const format of ['txt', 'csv']) { const control = document.createElement('button'); control.type = 'button'; control.textContent = format.toUpperCase(); control.onclick = () => requestLog(operator.id, safeFilename(operator.callsign), format); actions.append(control); }
+    li.append(name, actions); return li;
+  });
+  const instructorRows = (state.instructors || []).map(instructor => {
+    const li = document.createElement('li'); li.className = 'instructor-presence';
+    const name = document.createElement('span'); name.textContent = instructor.callsign;
+    const role = document.createElement('b'); role.textContent = 'INSTRUCTOR'; li.append(name, role); return li;
+  });
+  $('#operators').replaceChildren(...operatorRows, ...instructorRows);
+  $('#transmitter').textContent = state.transmitter || 'Canal libre';
   $('#transmitter').classList.toggle('busy', Boolean(state.transmitter));
   const me = state.operators.find(operator => operator.id === clientId);
   transmissionAllowed = !state.policy.receiveOnly && !me?.muted && (!state.policy.reservedFor || state.policy.reservedFor === clientId);
   currentWpm = state.policy.mandatoryWpm;
   $('#wpmValue').textContent = currentWpm;
   $('#frequencyValue').textContent = state.policy.toneFrequency;
-  $('#waveformValue').textContent = state.policy.toneWaveform;
+  $('#waveformValue').textContent = ({ sine: 'senoidal', triangle: 'triangular', square: 'cuadrada' })[state.policy.toneWaveform] || state.policy.toneWaveform;
   localAudio.setFrequency(state.policy.toneFrequency); remoteAudio.setFrequency(state.policy.toneFrequency);
   localAudio.setWaveform(state.policy.toneWaveform); remoteAudio.setWaveform(state.policy.toneWaveform);
   if (state.policy.mandatoryMode) { $('#mode').value = state.policy.mandatoryMode; $('#mode').disabled = true; } else $('#mode').disabled = false;
   configure(); renderDecoders(state);
-  $('#exercise').textContent = state.policy.exercise || 'No exercise assigned.';
+  $('#exercise').textContent = state.policy.exercise || 'No hay ejercicio asignado.';
   $('#exercisePanel').hidden = !state.policy.exercise;
   if (!transmissionAllowed) { keyer.releaseAll(); localAudio.keyUp(); }
 }
@@ -76,14 +89,14 @@ $('#joinForm').addEventListener('submit', async (event) => {
   await localAudio.unlock(); await remoteAudio.unlock();
   socket.emit('room:join', { callsign: $('#callsign').value, channel: $('#channel').value }, (answer) => {
     joined = Boolean(answer?.ok);
-    if (joined) { clientId = answer.client.id; currentChannel = answer.client.channel; $('#station').disabled = true; $('#downloadMyLog').disabled = false; $('#downloadRoomLog').disabled = false; setStatus(`Connected to ${answer.client.channel}`, 'ok'); applyState(answer.state); }
-    else setStatus(answer?.reason || 'Unable to join channel.', 'error');
+    if (joined) { clientId = answer.client.id; currentChannel = answer.client.channel; $('#station').disabled = true; $('#downloadRoomTxt').disabled = false; $('#downloadRoomCsv').disabled = false; setStatus(`Conectado al canal ${answer.client.channel}`, 'ok'); applyState(answer.state); }
+    else setStatus(answer?.reason || 'No se pudo ingresar al canal.', 'error');
   });
 });
 
 $('#mode').addEventListener('input', configure);
-$('#downloadMyLog').addEventListener('click', () => requestLog(clientId, safeFilename($('#callsign').value || 'operator')));
-$('#downloadRoomLog').addEventListener('click', () => requestLog('', 'room'));
+$('#downloadRoomTxt').addEventListener('click', () => requestLog('', 'room', 'txt'));
+$('#downloadRoomCsv').addEventListener('click', () => requestLog('', 'room', 'csv'));
 configure();
 
 const paddleFor = (event) => event.code === 'ControlLeft' ? 'dit' : event.code === 'ControlRight' ? 'dah' : null;
@@ -109,10 +122,14 @@ socket.on('room:list', rooms => {
     const li = document.createElement('li');
     const button = document.createElement('button'); button.type = 'button'; button.disabled = room.locked || joined;
     button.textContent = room.name; button.onclick = () => { $('#channel').value = room.name; $('#callsign').focus(); };
-    const detail = document.createElement('span'); detail.textContent = `${room.operators} operator${room.operators === 1 ? '' : 's'}${room.locked ? ' · locked' : ''}`;
+    const detail = document.createElement('span'); detail.textContent = `${room.operators} operador${room.operators === 1 ? '' : 'es'}${room.locked ? ' · bloqueado' : ''}`;
     li.append(button, detail); return li;
-  }) : [Object.assign(document.createElement('li'), { className: 'muted', textContent: 'No active channels' })]));
+  }) : [Object.assign(document.createElement('li'), { className: 'muted', textContent: 'No hay canales activos' })]));
 });
-socket.on('cw:key', ({ down }) => down ? remoteAudio.keyDown() : remoteAudio.keyUp());
-socket.on('room:closed', () => { joined = false; clientId = null; currentChannel = ''; keyer.releaseAll(); localAudio.keyUp(); remoteAudio.keyUp(); $('#station').disabled = false; $('#downloadMyLog').disabled = true; $('#downloadRoomLog').disabled = true; setStatus('Channel closed.', 'error'); });
-socket.on('disconnect', () => { joined = false; currentChannel = ''; remoteAudio.keyUp(); $('#station').disabled = false; $('#downloadMyLog').disabled = true; $('#downloadRoomLog').disabled = true; setStatus('Disconnected.', 'error'); });
+socket.on('cw:key', ({ down, at, durationMs }) => {
+  remoteAudioQueue = remoteAudioQueue
+    .catch(() => {})
+    .then(() => remoteAudio.scheduleRemoteKey(down, at, durationMs));
+});
+socket.on('room:closed', () => { joined = false; clientId = null; currentChannel = ''; keyer.releaseAll(); localAudio.keyUp(); remoteAudio.keyUp(); $('#station').disabled = false; $('#downloadRoomTxt').disabled = true; $('#downloadRoomCsv').disabled = true; setStatus('Canal cerrado.', 'error'); });
+socket.on('disconnect', () => { joined = false; currentChannel = ''; remoteAudio.keyUp(); $('#station').disabled = false; $('#downloadRoomTxt').disabled = true; $('#downloadRoomCsv').disabled = true; setStatus('Desconectado.', 'error'); });

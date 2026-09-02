@@ -17,7 +17,7 @@ function ensure(name) {
     name, members: new Set(), transmitter: null, releaseTimer: null,
     locked: false, receiveOnly: false, mandatoryWpm: 20, mandatoryMode: null,
     toneFrequency: 700, toneWaveform: 'sine', decodeText: true, decodeCode: true,
-    exercise: '', reservedFor: null, muted: new Set(), activity: new Map(), logs: [], persistent: false
+    exercise: '', reservedFor: null, muted: new Set(), decoderDisabled: new Set(), activity: new Map(), logs: [], persistent: false
   });
   return channels.get(name);
 }
@@ -29,6 +29,7 @@ function leave(name, socketId) {
   if (!room) return false;
   room.members.delete(socketId);
   room.muted.delete(socketId);
+  room.decoderDisabled.delete(socketId);
   const activity = room.activity.get(socketId);
   if (activity) { clearTimeout(activity.letterTimer); clearTimeout(activity.wordTimer); }
   room.activity.delete(socketId);
@@ -41,10 +42,10 @@ function leave(name, socketId) {
 
 function acquire(name, socketId) {
   const room = ensure(name);
-  if (room.receiveOnly) return { ok: false, reason: 'Instructor set this channel to receive-only.' };
-  if (room.muted.has(socketId)) return { ok: false, reason: 'You are muted by the instructor.' };
-  if (room.reservedFor && room.reservedFor !== socketId) return { ok: false, reason: 'Transmitter is reserved for another operator.' };
-  if (room.transmitter && room.transmitter !== socketId) return { ok: false, reason: 'Channel busy.' };
+  if (room.receiveOnly) return { ok: false, reason: 'El instructor configuró este canal solo para recepción.' };
+  if (room.muted.has(socketId)) return { ok: false, reason: 'El instructor silenció su transmisión.' };
+  if (room.reservedFor && room.reservedFor !== socketId) return { ok: false, reason: 'El transmisor está reservado para otro operador.' };
+  if (room.transmitter && room.transmitter !== socketId) return { ok: false, reason: 'Canal ocupado.' };
   clearTimeout(room.releaseTimer);
   room.releaseTimer = null;
   room.transmitter = socketId;
@@ -65,15 +66,15 @@ function decoder(room, socketId) {
 
 function recordKey(name, socketId, down, wpm, onUpdate, callsign = '') {
   const room = get(name);
-  if (!room) return;
+  if (!room) return null;
   const state = decoder(room, socketId);
   const ditMs = 1200 / wpm;
   if (down) {
     clearTimeout(state.letterTimer); clearTimeout(state.wordTimer);
     state.keyStartedAt = Date.now();
-    return;
+    return null;
   }
-  if (!state.keyStartedAt) return;
+  if (!state.keyStartedAt) return null;
   const duration = Date.now() - state.keyStartedAt;
   state.keyStartedAt = null;
   state.currentCode += duration < ditMs * 2 ? '.' : '-';
@@ -101,6 +102,7 @@ function recordKey(name, socketId, down, wpm, onUpdate, callsign = '') {
     if (state.code && !state.code.endsWith(' / ')) state.code += ' / ';
     onUpdate();
   }, Math.round(ditMs * 6));
+  return { durationMs: duration };
 }
 
 function scheduleRelease(name, socketId, delay, onRelease) {
@@ -134,7 +136,8 @@ function create(name) { const room = ensure(name); room.persistent = true; retur
 function canJoin(name) { return !get(name)?.locked; }
 function setPolicy(name, changes) { const room = create(name); Object.assign(room, changes); return room; }
 function setMuted(name, socketId, muted) { const room = ensure(name); muted ? room.muted.add(socketId) : room.muted.delete(socketId); }
+function setDecoderEnabled(name, socketId, enabled) { const room = ensure(name); enabled ? room.decoderDisabled.delete(socketId) : room.decoderDisabled.add(socketId); }
 function close(name) { const room = get(name); if (!room) return []; clearTimeout(room.releaseTimer); for (const state of room.activity.values()) { clearTimeout(state.letterTimer); clearTimeout(state.wordTimer); } channels.delete(name); return [...room.members]; }
 function logs(name, socketId = null) { const room = get(name); return room ? room.logs.filter(entry => !socketId || entry.socketId === socketId) : []; }
 
-module.exports = { ensure, get, list, create, canJoin, join, leave, close, acquire, scheduleRelease, release, members, transmitter, setPolicy, setMuted, recordKey, logs };
+module.exports = { ensure, get, list, create, canJoin, join, leave, close, acquire, scheduleRelease, release, members, transmitter, setPolicy, setMuted, setDecoderEnabled, recordKey, logs };

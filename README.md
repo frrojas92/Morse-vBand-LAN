@@ -1,59 +1,158 @@
 # Morse-vBand-LAN
 
-Offline-first LAN application for CW practice with multiple operators. A browser turns Morse-vBand USB HID input into timed key events; the server relays only those events and every receiving browser produces its own WebAudio sidetone.
+[![Node.js >= 20](https://img.shields.io/badge/Node.js-%3E%3D20-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Socket.IO 4.8](https://img.shields.io/badge/Socket.IO-4.8-010101?logo=socket.io&logoColor=white)](https://socket.io/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
+[![Último commit](https://img.shields.io/github/last-commit/frrojas92/Morse-vBand-LAN?logo=github)](https://github.com/frrojas92/Morse-vBand-LAN/commits/main)
+[![Tamaño del repositorio](https://img.shields.io/github/repo-size/frrojas92/Morse-vBand-LAN)](https://github.com/frrojas92/Morse-vBand-LAN)
+[![Licencia no especificada](https://img.shields.io/badge/licencia-no_especificada-red)](#licencia)
 
-The supported hardware is [Morse-vBand](https://github.com/frrojas92/Morse-vBand): Left Ctrl is DIT and Right Ctrl is DAH. A normal keyboard can also be used for testing.
+Aplicación local para prácticas de telegrafía CW con varios operadores. Funciona dentro de una red LAN y no necesita conexión a Internet durante su ejecución.
 
-## Run with Docker
+Cada navegador convierte las entradas del manipulador en eventos CW. El servidor coordina los canales, controla el transmisor y distribuye los eventos mediante Socket.IO. El audio se genera localmente con WebAudio; no se transmite ni se graba audio.
 
-Docker Engine with the Compose plugin is required. Building the image needs internet access once to download the Node base image and npm packages. After the image is present, runtime is fully independent of the internet.
+Compatible con el dispositivo [Morse-vBand](https://github.com/frrojas92/Morse-vBand):
+
+- `Ctrl izquierdo`: DIT
+- `Ctrl derecho`: DAH
+- También se puede usar un teclado convencional para pruebas.
+
+## Características
+
+- Directorio de canales activo para estudiantes e instructores.
+- Canales independientes con control de transmisión semidúplex.
+- Modos Iámbico A, Iámbico B y llave vertical.
+- Velocidad, frecuencia, forma de onda y modo configurables por el instructor.
+- Oscilador WebAudio persistente con temporización remota y protección frente a variaciones de Wi-Fi.
+- Decodificación independiente de código Morse por operador.
+- Activación o desactivación individual del decodificador de cada estudiante.
+- Presencia del instructor, identificado por su indicativo, en las listas de usuarios.
+- Ejercicios enviados desde el panel del instructor.
+- Reserva del transmisor, modo solo recepción, silencio y desconexión de operadores.
+- Registros descargables en TXT y CSV por sala o por operador.
+
+Los registros incluyen fecha y hora, canal, dirección TX/RX, indicativo, código Morse, texto decodificado, PPM, modo del manipulador, frecuencia, forma de onda y duración de la pulsación.
+
+## Inicio rápido con Docker
+
+Requisitos:
+
+- Docker Engine
+- Complemento Docker Compose
 
 ```sh
-docker compose up -d
-docker compose logs -f
-```
-
-Open `http://SERVER-IP:8080` from computers on the same LAN. Allow inbound TCP port 8080 in the server firewall if necessary. Stop with `docker compose down`.
-
-The instructor dashboard is at `http://SERVER-IP:8080/instructor.html`. Copy `.env.example` to `.env`, choose a private PIN, then rebuild:
-
-```sh
+git clone https://github.com/frrojas92/Morse-vBand-LAN.git
+cd Morse-vBand-LAN
 cp .env.example .env
 docker compose up -d --build
 ```
 
-If omitted, the development default is `morse-admin`; change it on any shared LAN.
+Direcciones:
 
-## Run without Docker
+- Estudiante: `http://IP-DEL-SERVIDOR:8080`
+- Instructor: `http://IP-DEL-SERVIDOR:8080/instructor.html`
+- Estado del servidor: `http://IP-DEL-SERVIDOR:8080/health`
+
+Si el usuario actual no tiene acceso al socket de Docker, ejecute los comandos con `sudo`.
+
+Para reconstruir completamente después de actualizar el código:
+
+```sh
+docker compose build --no-cache
+docker compose up -d --force-recreate
+```
+
+Después de reconstruir, actualice el navegador con `Ctrl+Shift+R` para evitar usar los archivos JavaScript o CSS almacenados en caché.
+
+### Administración del contenedor
+
+```sh
+# Ver estado
+docker compose ps
+
+# Ver registros
+docker compose logs -f
+
+# Detener la aplicación
+docker compose down
+```
+
+## Configuración del instructor
+
+Defina `INSTRUCTOR_PIN` en `.env`:
+
+```env
+INSTRUCTOR_PIN=cambie-este-pin
+```
+
+Si no se configura, el valor de desarrollo es `morse-admin`. No utilice ese valor en una red compartida.
+
+El instructor introduce su indicativo al iniciar sesión. Ese indicativo aparece en los canales activos para que los estudiantes puedan reconocerlo.
+
+## Ejecución sin Docker
+
+Requiere Node.js 20 o superior:
 
 ```sh
 npm install
 npm start
 ```
 
-Then open `http://localhost:8080`.
+Abra `http://localhost:8080`.
 
-## MVP behavior
+Para ejecutar las pruebas:
 
-- Callsigns and rooms live only in memory and disappear on restart.
-- Active rooms are listed in both student and instructor views. Duplicate room names are rejected.
-- Rooms are independent; presence and current-transmitter state are room scoped.
-- Half-duplex is enforced by a per-room server lock. It is released after a short post-element hang time or immediately on disconnect.
-- Iambic A, Iambic B, and straight-key modes are timed in the originating browser. WPM is enforced per room by the instructor.
-- Tone frequency and sine/triangle/square waveform are enforced per room by the instructor.
-- The server decodes each operator independently. The instructor can show or hide decoded text and dot-dash code in both instructor and student views.
-- Students can download their own log or the current room log as CSV. Instructors can download room and per-operator CSV logs. Rows include timestamp, TX/RX direction, callsign, Morse, decoded text, WPM, keyer mode, tone settings, and key duration.
-- The browser may require the Join button gesture before WebAudio is allowed to play.
-- No audio is recorded or sent over the network. Socket.IO carries key-down/key-up and room-state events only.
-- Instructor Mode can create/close/lock rooms, enforce WPM, tone, waveform, and keyer mode, control decoder visibility, assign exercises, switch students to receive-only, reserve or clear the transmitter, mute/disconnect operators, and monitor key activity.
+```sh
+npm test
+```
 
-## Architecture
+## Arquitectura
 
-- `server/server.js`: HTTP/static server and Socket.IO protocol.
-- `server/channels.js`: in-memory membership and half-duplex ownership.
-- `server/clients.js`: in-memory operator identity.
-- `public/cw-keyer.js`: paddle state and keyer timing.
-- `public/cw-audio.js`: local oscillator and click-free envelope.
-- `public/app.js`: HID-keyboard input, UI, and realtime events.
+```text
+Navegador del operador
+  ├─ public/cw-keyer.js   Temporización del manipulador
+  ├─ public/cw-audio.js   Generación y programación del audio
+  └─ public/app.js        Interfaz y eventos del estudiante
+             │
+             │ Socket.IO: estados de tecla, salas y políticas
+             ▼
+Servidor Node.js
+  ├─ server/server.js     HTTP, Socket.IO y acciones del instructor
+  ├─ server/channels.js   Canales, transmisión, decodificación y registros
+  └─ server/clients.js    Identidad temporal de los operadores
+```
 
-This is deliberately an unauthenticated training MVP. Use it only on a trusted LAN.
+El panel del instructor utiliza `public/instructor.html` y `public/instructor.js`.
+
+## Persistencia y seguridad
+
+- Los canales, operadores, políticas, texto decodificado y registros se mantienen en memoria.
+- Toda la información se pierde al reiniciar el servidor o eliminar el canal correspondiente.
+- La autenticación del instructor protege únicamente las acciones administrativas.
+- La aplicación está diseñada para una LAN de confianza y no debe exponerse directamente a Internet.
+- Solo se transmiten eventos y estados; el audio permanece en cada dispositivo.
+
+## Resolución de problemas
+
+### La reconstrucción muestra una versión anterior
+
+Compruebe que está ejecutando Docker Compose desde el clon correcto:
+
+```sh
+git rev-parse --short HEAD
+pwd
+docker compose up -d --build --force-recreate
+```
+
+Después, realice una actualización forzada del navegador.
+
+### No se escucha audio en un teléfono
+
+- Pulse **Ingresar** para permitir que el navegador active WebAudio.
+- Mantenga la pantalla activa durante la práctica.
+- Desactive temporalmente el ahorro de energía del navegador.
+- Compruebe que el teléfono y el servidor estén en la misma red local.
+
+### No se puede acceder a Docker
+
+Si aparece un error de permisos para `/var/run/docker.sock`, utilice `sudo docker compose ...` o configure el usuario en el grupo de Docker según las políticas del sistema.

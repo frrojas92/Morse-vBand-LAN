@@ -17,12 +17,14 @@ Morse-vBand-LAN is an offline-first Node.js and Socket.IO application for multi-
 - Instructor-enforced WPM, tone frequency, waveform, and optional keyer mode.
 - Sine, triangle, and square tone options. Sine remains the clean default.
 - Persistent WebAudio oscillators with attack/release envelopes to reduce clicks on remote and mobile clients.
+- Duration-based remote pulse scheduling to preserve dit/dah timing across jittery Wi-Fi and slow mobile WebAudio startup.
 - Server-side per-operator Morse decoding to plain text and dot-dash notation.
 - Instructor switches for independently displaying decoded text and dot-dash code.
+- Per-student decoder visibility controls and instructor callsign presence in student user lists.
 - TX/RX decoder views in the student portal and per-operator decoder output in the instructor portal.
 - Live channel directories in both portals with duplicate-name rejection for instructor-created channels.
-- Downloadable in-memory CSV logs for rooms and individual operators, including Morse, decoded text, callsign, direction, WPM, mode, tone settings, and key duration.
-- Simplified black interface using green and red status accents.
+- Downloadable in-memory TXT and CSV logs for rooms and every individual operator, including Morse, decoded text, callsign, direction, WPM, mode, tone settings, and key duration.
+- Simplified black interface using green and red gradient lettering and status accents.
 - Docker image and Compose deployment on TCP port 8080.
 
 ## Important files
