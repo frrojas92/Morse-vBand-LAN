@@ -59,7 +59,7 @@ function acquire(name, socketId) {
 function decoder(room, socketId) {
   if (!room.activity.has(socketId)) room.activity.set(socketId, {
     keyDowns: 0, lastTransmitAt: null, keyStartedAt: null, currentCode: '',
-    code: '', text: '', letterTimer: null, wordTimer: null
+    code: '', text: '', codeLength: 0, textLength: 0, letterTimer: null, wordTimer: null
   });
   return room.activity.get(socketId);
 }
@@ -83,8 +83,11 @@ function recordKey(name, socketId, down, wpm, onUpdate, callsign = '') {
     if (!state.currentCode) return;
     const morse = state.currentCode;
     const text = MORSE[morse] || '?';
-    state.code = `${state.code}${state.code && !state.code.endsWith(' / ') ? ' ' : ''}${state.currentCode}`.slice(-500);
+    const nextCode = `${state.code}${state.code && !state.code.endsWith(' / ') ? ' ' : ''}${state.currentCode}`;
+    state.codeLength += nextCode.length - state.code.length;
+    state.code = nextCode.slice(-500);
     state.text = `${state.text}${text}`.slice(-250);
+    state.textLength += text.length;
     state.currentCode = '';
     room.logs.push({ timestamp: new Date().toISOString(), socketId, callsign, morse, text, wpm,
       mode: room.mandatoryMode || 'student-choice', toneFrequency: room.toneFrequency,
@@ -94,12 +97,16 @@ function recordKey(name, socketId, down, wpm, onUpdate, callsign = '') {
   }, Math.round(ditMs * 2));
   state.wordTimer = setTimeout(() => {
     if (state.currentCode) {
-      state.code = `${state.code}${state.code ? ' ' : ''}${state.currentCode}`.slice(-500);
-      state.text = `${state.text}${MORSE[state.currentCode] || '?'}`.slice(-250);
+      const nextCode = `${state.code}${state.code ? ' ' : ''}${state.currentCode}`;
+      const decoded = MORSE[state.currentCode] || '?';
+      state.codeLength += nextCode.length - state.code.length;
+      state.code = nextCode.slice(-500);
+      state.text = `${state.text}${decoded}`.slice(-250);
+      state.textLength += decoded.length;
       state.currentCode = '';
     }
-    if (state.text && !state.text.endsWith(' ')) state.text += ' ';
-    if (state.code && !state.code.endsWith(' / ')) state.code += ' / ';
+    if (state.text && !state.text.endsWith(' ')) { state.text += ' '; state.textLength += 1; }
+    if (state.code && !state.code.endsWith(' / ')) { state.code += ' / '; state.codeLength += 3; }
     onUpdate();
   }, Math.round(ditMs * 6));
   return { durationMs: duration };

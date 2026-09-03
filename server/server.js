@@ -30,8 +30,9 @@ function roomState(channel) {
       const activity = room.activity.get(operator.id);
       return { ...operator, muted: room.muted.has(operator.id), decoderEnabled: !room.decoderDisabled.has(operator.id), reserved: room.reservedFor === operator.id,
         keyDowns: activity?.keyDowns || 0, lastTransmitAt: activity?.lastTransmitAt || null,
-        code: `${activity?.code || ''}${activity?.currentCode ? `${activity.code ? ' ' : ''}${activity.currentCode}` : ''}`,
-        text: activity?.text || '' };
+        code: `${activity?.code || ''}${activity?.currentCode ? `${activity.code && !activity.code.endsWith(' / ') ? ' ' : ''}${activity.currentCode}` : ''}`,
+        codeCursor: (activity?.codeLength || 0) + (activity?.currentCode ? (activity.code && !activity.code.endsWith(' / ') ? 1 : 0) + activity.currentCode.length : 0),
+        text: activity?.text || '', textCursor: activity?.textLength || 0 };
     }),
     transmitter: txId ? clients.get(txId)?.callsign || null : null,
     policy: { locked: room.locked, receiveOnly: room.receiveOnly, mandatoryWpm: room.mandatoryWpm,
@@ -44,6 +45,7 @@ function instructorState() { return { channels: channels.list().map(room => room
 function roomDirectory() { return channels.list().map(room => ({ name: room.name, operators: room.members.size, locked: room.locked })); }
 function publishDirectory() { io.emit('room:list', roomDirectory()); }
 function publishInstructor() { io.to('__instructors').emit('instructor:state', instructorState()); }
+function publishInstructorCw(channel, event) { io.to('__instructors').emit('instructor:cw', { channel, ...event }); }
 function publish(channel) { const state = roomState(channel); if (state) io.to(channel).emit('room:state', state); publishInstructor(); }
 function publishAllRooms() { for (const room of channels.list()) publish(room.name); }
 function validPin(pin) { const a = Buffer.from(String(pin || '')); const b = Buffer.from(INSTRUCTOR_PIN); return a.length === b.length && crypto.timingSafeEqual(a, b); }
@@ -52,7 +54,9 @@ function stopTransmission(channel) {
   const room = channels.get(channel); if (!room?.transmitter) return;
   const callsign = clients.get(room.transmitter)?.callsign || 'Operator';
   channels.release(channel, room.transmitter);
-  io.to(channel).emit('cw:key', { down: false, callsign, at: Date.now() });
+  const event = { down: false, callsign, at: Date.now() };
+  io.to(channel).emit('cw:key', event);
+  publishInstructorCw(channel, event);
 }
 
 io.on('connection', (socket) => {
@@ -104,6 +108,7 @@ io.on('connection', (socket) => {
     const event = { down, callsign: client.callsign, senderId: socket.id, at: Date.now(),
       durationMs: keyRecord?.durationMs || null };
     socket.to(client.channel).emit('cw:key', event);
+    publishInstructorCw(client.channel, event);
     if (down) publish(client.channel);
     else channels.scheduleRelease(client.channel, socket.id, Math.round(4800 / wpm), () => publish(client.channel));
     reply({ ok: true });
@@ -159,7 +164,11 @@ io.on('connection', (socket) => {
     const client = clients.remove(socket.id);
     if (!client) { if (wasInstructor) publishAllRooms(); return; }
     const wasTransmitting = channels.leave(client.channel, socket.id);
-    if (wasTransmitting) socket.to(client.channel).emit('cw:key', { down: false, callsign: client.callsign, at: Date.now() });
+    if (wasTransmitting) {
+      const event = { down: false, callsign: client.callsign, at: Date.now() };
+      socket.to(client.channel).emit('cw:key', event);
+      publishInstructorCw(client.channel, event);
+    }
     publish(client.channel);
     publishDirectory();
   });

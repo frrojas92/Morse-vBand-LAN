@@ -108,17 +108,37 @@ test('instructor policies are enforced server-side', async t => {
   await emit(instructor, 'instructor:action', { action: 'reserve', channel: 'CLASS', target: '' });
   await emit(instructor, 'instructor:action', { action: 'wpm', channel: 'CLASS', value: 60 });
   const remoteElement = nextEvent(studentB, 'cw:key', event => !event.down);
+  const instructorKeyDown = nextEvent(instructor, 'instructor:cw', event => event.down);
   assert.equal((await emit(studentA, 'cw:key', { down: true })).ok, true);
+  assert.equal((await instructorKeyDown).channel, 'CLASS', 'instructors receive channel-labelled CW audio events');
   await delay(10);
   const decoded = nextState(instructor, value => value.channels
     .find(room => room.channel === 'CLASS')?.operators
     .find(operator => operator.id === a.client.id)?.text === 'E');
+  const instructorElement = nextEvent(instructor, 'instructor:cw', event => !event.down);
   assert.equal((await emit(studentA, 'cw:key', { down: false })).ok, true);
   assert.ok((await remoteElement).durationMs > 0, 'receivers get the measured element duration');
+  assert.ok((await instructorElement).durationMs > 0, 'instructors get the measured element duration');
   state = await decoded;
   const operator = state.channels.find(room => room.channel === 'CLASS').operators.find(item => item.id === a.client.id);
   assert.equal(operator.code, '.');
   assert.equal(operator.text, 'E');
+  assert.equal(operator.codeCursor, 1);
+  assert.equal(operator.textCursor, 1);
+
+  await delay(110);
+  const afterWord = await emit(instructor, 'instructor:action', { action: 'lock', channel: 'CLASS', value: false });
+  assert.equal(afterWord.ok, true);
+  const nextPreview = nextState(instructor, value => {
+    const item = value.channels.find(room => room.channel === 'CLASS')?.operators.find(entry => entry.id === a.client.id);
+    return item?.code.endsWith('.') && item.codeCursor > 4 ? item : false;
+  });
+  assert.equal((await emit(studentA, 'cw:key', { down: true })).ok, true);
+  await delay(10);
+  assert.equal((await emit(studentA, 'cw:key', { down: false })).ok, true);
+  const previewOperator = (await nextPreview).channels.find(room => room.channel === 'CLASS').operators.find(item => item.id === a.client.id);
+  assert.equal(previewOperator.code, '. / .');
+  assert.equal(previewOperator.codeCursor, 5, 'the live preview cursor remains monotonic after a word separator');
 
   const roomLog = await emit(studentA, 'logs:get', { channel: 'CLASS' });
   assert.equal(roomLog.ok, true);

@@ -1,5 +1,6 @@
 import { CwAudio } from './cw-audio.js';
 import { CwKeyer } from './cw-keyer.js';
+import { formatTextLog } from './log-format.js';
 
 const socket = io();
 const localAudio = new CwAudio();
@@ -11,6 +12,8 @@ let transmissionAllowed = true;
 let currentWpm = 15;
 let currentChannel = '';
 let remoteAudioQueue = Promise.resolve();
+let latestRoomState = null;
+const decoderViews = new Map();
 
 const keyer = new CwKeyer(async (down) => {
   if (down && !transmissionAllowed) return setStatus('Transmisión desactivada por el instructor.', 'error');
@@ -27,7 +30,7 @@ function downloadLog(entries, filename, format) {
   const quote = value => `"${String(value ?? '').replaceAll('"', '""')}"`;
   const content = format === 'csv'
     ? [columns.join(','), ...entries.map(entry => columns.map(column => quote(entry[column])).join(','))].join('\n')
-    : entries.map(entry => `[${entry.timestamp}] ${entry.direction} ${entry.callsign} | ${entry.morse} | ${entry.text} | ${entry.wpm} WPM | ${entry.mode} | ${entry.toneFrequency} Hz ${entry.toneWaveform} | ${entry.keyDurationMs} ms`).join('\n');
+    : formatTextLog(entries, currentChannel);
   const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([content], { type: format === 'csv' ? 'text/csv' : 'text/plain' })); link.download = filename; link.click(); URL.revokeObjectURL(link.href);
 }
 function requestLog(target, label, format) {
@@ -40,6 +43,35 @@ function configure() {
   keyer.configure($('#mode').value, currentWpm);
 }
 
+function decoderView(operator) {
+  const sourceText = operator.text || '';
+  const sourceCode = operator.code || '';
+  const textCursor = operator.textCursor ?? sourceText.length;
+  const codeCursor = operator.codeCursor ?? sourceCode.length;
+  const view = decoderViews.get(operator.id);
+  if (!view) {
+    const initial = { textCursor, codeCursor, text: sourceText, code: sourceCode };
+    decoderViews.set(operator.id, initial);
+    return initial;
+  }
+  const newTextLength = textCursor - view.textCursor;
+  const newCodeLength = codeCursor - view.codeCursor;
+  if (newTextLength > 0) view.text += sourceText.slice(-newTextLength);
+  else if (newTextLength < 0) view.text = sourceText;
+  if (newCodeLength > 0) view.code += sourceCode.slice(-newCodeLength);
+  else if (newCodeLength < 0) view.code = sourceCode;
+  view.textCursor = textCursor;
+  view.codeCursor = codeCursor;
+  return view;
+}
+
+function clearDecoder(operator) {
+  const view = decoderView(operator);
+  view.text = '';
+  view.code = '';
+  if (latestRoomState) renderDecoders(latestRoomState);
+}
+
 function renderDecoders(state) {
   const me = state.operators.find(operator => operator.id === clientId);
   const enabled = me?.decoderEnabled !== false && (state.policy.decodeText || state.policy.decodeCode);
@@ -47,14 +79,30 @@ function renderDecoders(state) {
   if (!enabled) return;
   $('#decoders').replaceChildren(...state.operators.map(operator => {
     const row = document.createElement('article'); row.className = 'decode-row';
-    const heading = document.createElement('h3'); heading.textContent = `${operator.id === clientId ? 'TX' : 'RX'} · ${operator.callsign}`; row.append(heading);
-    if (state.policy.decodeText) { const text = document.createElement('p'); text.className = 'decoded-text'; text.textContent = operator.text || '…'; row.append(text); }
-    if (state.policy.decodeCode) { const code = document.createElement('code'); code.textContent = operator.code || '…'; row.append(code); }
+    const header = document.createElement('div'); header.className = 'decode-header';
+    const heading = document.createElement('h3'); heading.textContent = `${operator.id === clientId ? 'TX' : 'RX'} · ${operator.callsign}`;
+    header.append(heading, buttonForClear(operator)); row.append(header);
+    const view = decoderView(operator);
+    const message = document.createElement('div'); message.className = 'decode-message';
+    if (state.policy.decodeText) { const text = document.createElement('p'); text.className = 'decoded-text'; text.textContent = view.text || '…'; message.append(text); }
+    if (state.policy.decodeCode) { const code = document.createElement('code'); code.textContent = view.code || '…'; message.append(code); }
+    row.append(message);
     return row;
   }));
 }
 
+function buttonForClear(operator) {
+  const control = document.createElement('button');
+  control.type = 'button';
+  control.className = 'clear-decoder';
+  control.textContent = 'Limpiar vista';
+  control.title = 'Limpia solo esta vista; no modifica los registros TXT/CSV';
+  control.onclick = () => clearDecoder(operator);
+  return control;
+}
+
 function applyState(state) {
+  latestRoomState = state;
   const operatorRows = state.operators.map(operator => {
     const li = document.createElement('li'); const name = document.createElement('span'); name.textContent = operator.callsign;
     const actions = document.createElement('span'); actions.className = 'operator-log-actions';
@@ -131,5 +179,5 @@ socket.on('cw:key', ({ down, at, durationMs }) => {
     .catch(() => {})
     .then(() => remoteAudio.scheduleRemoteKey(down, at, durationMs));
 });
-socket.on('room:closed', () => { joined = false; clientId = null; currentChannel = ''; keyer.releaseAll(); localAudio.keyUp(); remoteAudio.keyUp(); $('#station').disabled = false; $('#downloadRoomTxt').disabled = true; $('#downloadRoomCsv').disabled = true; setStatus('Canal cerrado.', 'error'); });
-socket.on('disconnect', () => { joined = false; currentChannel = ''; remoteAudio.keyUp(); $('#station').disabled = false; $('#downloadRoomTxt').disabled = true; $('#downloadRoomCsv').disabled = true; setStatus('Desconectado.', 'error'); });
+socket.on('room:closed', () => { joined = false; clientId = null; currentChannel = ''; latestRoomState = null; decoderViews.clear(); keyer.releaseAll(); localAudio.keyUp(); remoteAudio.keyUp(); $('#station').disabled = false; $('#downloadRoomTxt').disabled = true; $('#downloadRoomCsv').disabled = true; setStatus('Canal cerrado.', 'error'); });
+socket.on('disconnect', () => { joined = false; currentChannel = ''; latestRoomState = null; decoderViews.clear(); remoteAudio.keyUp(); $('#station').disabled = false; $('#downloadRoomTxt').disabled = true; $('#downloadRoomCsv').disabled = true; setStatus('Desconectado.', 'error'); });
