@@ -24,13 +24,27 @@ Compatible con el dispositivo [Morse-vBand](https://github.com/frrojas92/Morse-v
 - Velocidad, frecuencia, forma de onda y modo configurables por el instructor.
 - Oscilador WebAudio persistente con temporización remota y protección frente a variaciones de Wi-Fi.
 - Decodificación independiente de código Morse por operador.
+- Paneles de decodificación amplios, multilínea y desplazables para mensajes largos.
+- Limpieza visual independiente por operador sin eliminar el historial registrado.
 - Activación o desactivación individual del decodificador de cada estudiante.
 - Presencia del instructor, identificado por su indicativo, en las listas de usuarios.
+- Monitorización de audio CW en vivo desde el panel del instructor.
 - Ejercicios enviados desde el panel del instructor.
 - Reserva del transmisor, modo solo recepción, silencio y desconexión de operadores.
-- Registros descargables en TXT y CSV por sala o por operador.
+- Registros descargables por canal u operador: transcripción TXT legible y detalle CSV por evento.
 
-Los registros incluyen fecha y hora, canal, dirección TX/RX, indicativo, código Morse, texto decodificado, PPM, modo del manipulador, frecuencia, forma de onda y duración de la pulsación.
+Los registros conservan fecha y hora, canal, dirección TX/RX, indicativo, código Morse, texto decodificado, PPM, modo del manipulador, frecuencia, forma de onda y duración de la pulsación. El TXT agrupa las letras en mensajes y reconstruye los espacios entre palabras; el CSV conserva una fila por carácter para análisis detallado.
+
+## Decodificador y registros
+
+Cada operador dispone de un panel independiente con el texto decodificado y el código Morse. Los paneles admiten varias líneas y añaden desplazamiento vertical cuando el contenido supera el espacio visible.
+
+El botón **Limpiar vista** borra únicamente el contenido mostrado para ese operador en el navegador donde se pulsa. No modifica la vista de otros usuarios, el estado del servidor ni los registros descargables. Los caracteres recibidos después de limpiar aparecen como un mensaje nuevo.
+
+Las descargas están disponibles tanto para el canal completo como para cada operador:
+
+- **TXT:** transcripción preparada para lectura humana, agrupada por operador y transmisión.
+- **CSV:** datos detallados por carácter, adecuados para hojas de cálculo y análisis.
 
 ## Inicio rápido con Docker
 
@@ -88,6 +102,8 @@ Si no se configura, el valor de desarrollo es `morse-admin`. No utilice ese valo
 
 El instructor introduce su indicativo al iniciar sesión. Ese indicativo aparece en los canales activos para que los estudiantes puedan reconocerlo.
 
+Al pulsar **Ingresar**, el navegador también habilita WebAudio. El instructor recibe y escucha las señales CW de los canales activos con la frecuencia y forma de onda configuradas para cada canal, al mismo tiempo que observa su decodificación en pantalla.
+
 ## Ejecución sin Docker
 
 Requiere Node.js 20 o superior:
@@ -111,6 +127,7 @@ npm test
 Navegador del operador
   ├─ public/cw-keyer.js   Temporización del manipulador
   ├─ public/cw-audio.js   Generación y programación del audio
+  ├─ public/log-format.js Transcripción legible de los registros TXT
   └─ public/app.js        Interfaz y eventos del estudiante
              │
              │ Socket.IO: estados de tecla, salas y políticas
@@ -151,6 +168,13 @@ Después, realice una actualización forzada del navegador.
 - Mantenga la pantalla activa durante la práctica.
 - Desactive temporalmente el ahorro de energía del navegador.
 - Compruebe que el teléfono y el servidor estén en la misma red local.
+
+### El instructor ve el código pero no escucha el audio
+
+- Ingrese al panel mediante el botón **Ingresar** para que el navegador permita iniciar WebAudio.
+- Compruebe que la pestaña y el sitio no estén silenciados.
+- Recargue la página e ingrese nuevamente si el dispositivo de audio cambió durante la sesión.
+- Reconstruya el contenedor y use `Ctrl+Shift+R` si el navegador aún conserva una versión anterior.
 
 ### No se puede acceder a Docker
 
