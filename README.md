@@ -49,6 +49,16 @@ Las descargas están disponibles tanto para el canal completo como para cada ope
 - **TXT:** transcripción detallada agrupada por operador y transmisión, seguida por una interacción compacta con dirección TX/RX, indicativo y texto.
 - **CSV:** datos detallados por carácter, adecuados para hojas de cálculo y análisis.
 
+El final de cada TXT facilita la lectura rápida sin eliminar los bloques técnicos anteriores:
+
+```text
+Interacción TX/RX
+[RX] INSTR: K1MED DE INSTR SEND 9 LINE K
+[TX] K1MED: INSTR DE K1MED ROGER
+```
+
+Hay un intercambio CASEVAC ficticio completo en [`examples/casevac-example/`](examples/casevac-example/), acompañado por el generador reproducible [`examples/casevac-example-generator.mjs`](examples/casevac-example-generator.mjs).
+
 ## Inicio rápido con Docker
 
 Requisitos:
@@ -107,6 +117,21 @@ El instructor introduce su indicativo al iniciar sesión. Ese indicativo aparece
 
 Al pulsar **Ingresar**, el navegador también habilita WebAudio. El instructor recibe y escucha las señales CW de los canales activos con la frecuencia y forma de onda configuradas para cada canal, al mismo tiempo que observa su decodificación en pantalla.
 
+### Transmisión del instructor
+
+El instructor puede transmitir directamente desde su portal:
+
+1. Cree un canal o seleccione uno existente.
+2. Pulse **Transmitir aquí** en la tarjeta del canal.
+3. Seleccione Iámbico A, Iámbico B o llave vertical cuando el canal permita elegir el modo.
+4. Use `Ctrl izquierdo` para DIT y `Ctrl derecho` para DAH.
+
+Solo puede seleccionarse un canal de transmisión a la vez. La estación del instructor utiliza el mismo control semidúplex, configuración de PPM, tono, forma de onda, decodificador y registro que los estudiantes. Las políticas de solo recepción, reserva y ocupación del canal también se validan en el servidor.
+
+### Apariencia
+
+Los portales de estudiante e instructor incluyen **Modo claro / Modo oscuro**. La selección queda almacenada en el navegador; el tema oscuro utiliza fondo negro puro (`#000000`). Ambos encabezados muestran el emblema local de la Escuela de Telecomunicaciones del Ejército de Chile.
+
 ## Ejecución sin Docker
 
 Requiere Node.js 20 o superior:
@@ -141,13 +166,13 @@ Servidor Node.js
   └─ server/clients.js    Identidad temporal de los operadores
 ```
 
-El panel del instructor utiliza `public/instructor.html` y `public/instructor.js`.
+El panel del instructor utiliza `public/instructor.html` y `public/instructor.js`; reutiliza `public/cw-keyer.js` y `public/cw-audio.js` para transmitir. `public/theme.js` administra el tema compartido por ambos portales.
 
 ## Persistencia y seguridad
 
 - Los canales, operadores, políticas, texto decodificado y registros se mantienen en memoria.
 - Toda la información se pierde al reiniciar el servidor o eliminar el canal correspondiente.
-- La autenticación del instructor protege únicamente las acciones administrativas.
+- La autenticación del instructor protege las acciones administrativas y la habilitación de su transmisor.
 - La aplicación está diseñada para una LAN de confianza y no debe exponerse directamente a Internet.
 - Solo se transmiten eventos y estados; el audio permanece en cada dispositivo.
 
@@ -178,6 +203,14 @@ Después, realice una actualización forzada del navegador.
 - Compruebe que la pestaña y el sitio no estén silenciados.
 - Recargue la página e ingrese nuevamente si el dispositivo de audio cambió durante la sesión.
 - Reconstruya el contenedor y use `Ctrl+Shift+R` si el navegador aún conserva una versión anterior.
+
+### El instructor no puede transmitir
+
+- Pulse **Transmitir aquí** en el canal deseado antes de usar el manipulador.
+- Compruebe que el canal no esté en modo solo recepción.
+- Libere una reserva asignada a otro operador si corresponde.
+- Espere a que el indicador muestre **Canal libre** si otro operador está transmitiendo.
+- Verifique que el modo impuesto por el canal coincida con el manipulador utilizado.
 
 ### No se puede acceder a Docker
 
