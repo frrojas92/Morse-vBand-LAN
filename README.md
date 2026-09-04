@@ -8,7 +8,7 @@
 
 Contenedor Docker ideado para prácticas de telegrafía CW con varios operadores. Funciona dentro de una red LAN y no necesita conexión a Internet durante su ejecución.
 
-Cada navegador convierte las entradas del manipulador en eventos CW. El servidor coordina los canales, controla el transmisor y distribuye los eventos mediante Socket.IO. El audio se genera localmente con WebAudio; no se transmite ni se graba audio.
+Cada navegador convierte las entradas del manipulador en "transmisiones" CW. El servidor coordina los canales, controla el transmisor y distribuye los eventos mediante Socket.IO. El audio se genera localmente con WebAudio; no se transmite ni se graba audio.
 
 Compatible con el dispositivo [Morse-vBand](https://github.com/frrojas92/Morse-vBand):
 
