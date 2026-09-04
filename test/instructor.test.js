@@ -150,6 +150,22 @@ test('instructor policies are enforced server-side', async t => {
   const operatorLog = await emit(studentB, 'logs:get', { channel: 'CLASS', target: a.client.id });
   assert.equal(operatorLog.ok, true, 'room members can download each operator log');
   assert.equal(operatorLog.entries.at(-1).callsign, 'A1AA');
+
+  assert.match((await emit(studentB, 'instructor:tx:join', { channel: 'CLASS' })).reason, /instructor/);
+  const instructorTx = await emit(instructor, 'instructor:tx:join', { channel: 'CLASS' });
+  assert.equal(instructorTx.ok, true);
+  assert.equal(instructorTx.client.callsign, 'INSTRUCTOR');
+  await delay(100);
+  const studentReceivesInstructor = nextEvent(studentA, 'cw:key', event => event.senderId === instructor.id && !event.down);
+  assert.equal((await emit(instructor, 'cw:key', { down: true })).ok, true);
+  await delay(10);
+  assert.equal((await emit(instructor, 'cw:key', { down: false })).ok, true);
+  assert.ok((await studentReceivesInstructor).durationMs > 0, 'students receive instructor CW elements');
+  await delay(50);
+  const instructorLog = await emit(instructor, 'logs:get', { channel: 'CLASS', target: instructor.id });
+  assert.equal(instructorLog.ok, true);
+  assert.equal(instructorLog.entries.at(-1).callsign, 'INSTRUCTOR');
+  assert.equal(instructorLog.entries.at(-1).direction, 'TX');
   assert.match((await emit(instructor, 'instructor:action', { action: 'create', channel: 'CLASS' })).reason, /ya existe/);
 
   assert.equal((await emit(instructor, 'instructor:action', { action: 'close', channel: 'CLASS' })).ok, true);

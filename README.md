@@ -29,6 +29,9 @@ Compatible con el dispositivo [Morse-vBand](https://github.com/frrojas92/Morse-v
 - Activación o desactivación individual del decodificador de cada estudiante.
 - Presencia del instructor, identificado por su indicativo, en las listas de usuarios.
 - Monitorización de audio CW en vivo desde el panel del instructor.
+- Transmisión Morse del instructor en un canal seleccionado con los mismos controles DIT/DAH, modos, decodificación y registros que una estación estudiantil.
+- Tema oscuro completamente negro y tema claro seleccionable, con preferencia persistente en ambos portales.
+- Emblema de la Escuela de Telecomunicaciones del Ejército de Chile en la esquina superior derecha de las vistas de estudiante e instructor.
 - Ejercicios enviados desde el panel del instructor.
 - Reserva del transmisor, modo solo recepción, silencio y desconexión de operadores.
 - Registros descargables por canal u operador: transcripción TXT legible y detalle CSV por evento.
@@ -43,7 +46,7 @@ El botón **Limpiar vista** borra únicamente el contenido mostrado para ese ope
 
 Las descargas están disponibles tanto para el canal completo como para cada operador:
 
-- **TXT:** transcripción preparada para lectura humana, agrupada por operador y transmisión.
+- **TXT:** transcripción detallada agrupada por operador y transmisión, seguida por una interacción compacta con dirección TX/RX, indicativo y texto.
 - **CSV:** datos detallados por carácter, adecuados para hojas de cálculo y análisis.
 
 ## Inicio rápido con Docker

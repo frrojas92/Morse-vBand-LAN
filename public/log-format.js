@@ -42,7 +42,7 @@ export function formatTextLog(entries, channel) {
     `Generado: ${new Date().toISOString()}`,
     ''
   ];
-  if (!blocks.length) return [...lines, 'No hay mensajes registrados.'].join('\n');
+  if (!blocks.length) return [...lines, 'No hay mensajes registrados.', '', 'Interacción TX/RX', 'No hay interacción registrada.'].join('\n');
 
   blocks.forEach((block, index) => {
     if (index) lines.push('');
@@ -51,5 +51,7 @@ export function formatTextLog(entries, channel) {
     lines.push(`Morse: ${block.codes.join(' ') || '—'}`);
     lines.push(`Configuración: ${block.wpm} PPM · ${block.mode} · ${block.toneFrequency} Hz · ${block.toneWaveform}`);
   });
+  lines.push('', 'Interacción TX/RX');
+  for (const block of blocks) lines.push(`[${block.direction}] ${block.callsign}: ${block.text || '—'}`);
   return lines.join('\n');
 }

@@ -436,6 +436,8 @@ Las rayas cuentan tres unidades, los puntos una y las pausas internas una. Si el
 
 Cambios de operador, dirección, PPM, modo, frecuencia o forma de onda abren un bloque nuevo. Un registro vacío genera un TXT válido con `No hay mensajes registrados.`.
 
+Al final, el TXT agrega `Interacción TX/RX`: una transcripción compacta que conserva solo dirección, indicativo y texto. Los bloques detallados anteriores permanecen sin cambios. Si no existen entradas, esta sección indica `No hay interacción registrada.`.
+
 ## 14. Desconexión y limpieza
 
 Al desconectar:

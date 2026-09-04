@@ -65,11 +65,16 @@ io.on('connection', (socket) => {
     const requestedChannel = normalizeChannel(payload.channel) || 'LOBBY';
     if (!channels.canJoin(requestedChannel)) return reply({ ok: false, reason: 'Este canal está bloqueado.' });
     const previous = clients.get(socket.id);
-    if (previous) {
-      socket.leave(previous.channel);
-      channels.leave(previous.channel, socket.id);
-      publish(previous.channel);
-    }
+      if (previous) {
+        socket.leave(previous.channel);
+        const wasTransmitting = channels.leave(previous.channel, socket.id);
+        if (wasTransmitting) {
+          const event = { down: false, callsign: previous.callsign, senderId: socket.id, at: Date.now() };
+          socket.to(previous.channel).emit('cw:key', event);
+          publishInstructorCw(previous.channel, event);
+        }
+        publish(previous.channel);
+      }
     const client = clients.add(socket.id, payload.callsign, requestedChannel);
     socket.join(client.channel);
     channels.join(client.channel, socket.id);
@@ -118,6 +123,32 @@ io.on('connection', (socket) => {
     if (!validPin(payload.pin)) return reply({ ok: false, reason: 'PIN de instructor incorrecto.' });
     const callsign = String(payload.callsign || 'INSTRUCTOR').trim().toUpperCase().replace(/[^A-Z0-9/_-]/g, '').slice(0, 16) || 'INSTRUCTOR';
     instructors.set(socket.id, callsign); socket.join('__instructors'); reply({ ok: true, ...instructorState() }); publishAllRooms();
+  });
+
+  socket.on('instructor:tx:join', (payload = {}, reply = () => {}) => {
+    const callsign = instructors.get(socket.id);
+    if (!callsign) return reply({ ok: false, reason: 'Se requiere acceso de instructor.' });
+    const channel = normalizeChannel(payload.channel);
+    if (!channel || !channels.get(channel)) return reply({ ok: false, reason: 'No se encontró el canal.' });
+    const previous = clients.get(socket.id);
+    if (previous?.channel !== channel) {
+      if (previous) {
+        socket.leave(previous.channel);
+        const wasTransmitting = channels.leave(previous.channel, socket.id);
+        if (wasTransmitting) {
+          const event = { down: false, callsign: previous.callsign, senderId: socket.id, at: Date.now() };
+          socket.to(previous.channel).emit('cw:key', event);
+          publishInstructorCw(previous.channel, event);
+        }
+        publish(previous.channel);
+      }
+      clients.add(socket.id, callsign, channel);
+      socket.join(channel);
+      channels.join(channel, socket.id);
+      publish(channel);
+      publishDirectory();
+    }
+    reply({ ok: true, client: clients.get(socket.id), state: roomState(channel) });
   });
 
   socket.on('instructor:action', (payload = {}, reply = () => {}) => {

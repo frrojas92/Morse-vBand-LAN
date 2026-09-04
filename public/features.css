@@ -6,7 +6,7 @@
 .decode-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .decode-row h3 { margin: 0; color: var(--green); font-size: .8rem; }
 .decode-row p, .decode-row code { display: block; margin: 5px 0; overflow-wrap: anywhere; white-space: pre-wrap; }
-.decode-message { min-height: 110px; max-height: 280px; overflow: auto; padding: 14px; border: 1px solid var(--line); border-radius: 4px; background: #020603; line-height: 1.55; }
+.decode-message { min-height: 110px; max-height: 280px; overflow: auto; padding: 14px; border: 1px solid var(--line); border-radius: 4px; background: var(--input); line-height: 1.55; }
 .decoded-text { font-size: 1.25rem; color: var(--text); }
 .decode-row code, .instructor-decode code { color: var(--red); }
 .clear-decoder { width: auto; padding: 6px 9px; font-size: .72rem; white-space: nowrap; }

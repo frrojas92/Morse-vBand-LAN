@@ -1,0 +1,131 @@
+Morse-vBand LAN — Registro legible
+Canal: CASEVAC
+Generado: 2026-09-04T15:45:00.000Z
+
+[RX] INSTR · 2026-09-04T15:30:00.960Z
+Texto: K1MED DE INSTR SEND 9 LINE K
+Morse: -.- .---- -- . -.. / -.. . / .. -. ... - .-. / ... . -. -.. / ----. / .-.. .. -. . / -.-
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[TX] K1MED · 2026-09-04T15:30:21.520Z
+Texto: INSTR DE K1MED ROGER
+Morse: .. -. ... - .-. / -.. . / -.- .---- -- . -.. / .-. --- --. . .-.
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[RX] INSTR · 2026-09-04T15:30:37.680Z
+Texto: SEND L1 K
+Morse: ... . -. -.. / .-.. .---- / -.-
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[TX] K1MED · 2026-09-04T15:30:46.720Z
+Texto: L1 AB12345678
+Morse: .-.. .---- / .- -... .---- ..--- ...-- ....- ..... -.... --... ---..
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[RX] INSTR · 2026-09-04T15:31:03.200Z
+Texto: R1 ROGER
+Morse: .-. .---- / .-. --- --. . .-.
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[TX] K1MED · 2026-09-04T15:31:12.000Z
+Texto: L2 4650 K1MED
+Morse: .-.. ..--- / ....- -.... ..... ----- / -.- .---- -- . -..
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[RX] INSTR · 2026-09-04T15:31:26.480Z
+Texto: R2 ROGER
+Morse: .-. ..--- / .-. --- --. . .-.
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[TX] K1MED · 2026-09-04T15:31:35.120Z
+Texto: L3 A1 C1
+Morse: .-.. ...-- / .- .---- / -.-. .----
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[RX] INSTR · 2026-09-04T15:31:44.960Z
+Texto: R3 ROGER
+Morse: .-. ...-- / .-. --- --. . .-.
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[TX] K1MED · 2026-09-04T15:31:53.440Z
+Texto: L4 A
+Morse: .-.. ....- / .-
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[RX] INSTR · 2026-09-04T15:31:58.240Z
+Texto: R4 ROGER
+Morse: .-. ....- / .-. --- --. . .-.
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[TX] K1MED · 2026-09-04T15:32:06.560Z
+Texto: L5 L1 A1
+Morse: .-.. ..... / .-.. .---- / .- .----
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[RX] INSTR · 2026-09-04T15:32:15.920Z
+Texto: R5 ROGER
+Morse: .-. ..... / .-. --- --. . .-.
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[TX] K1MED · 2026-09-04T15:32:24.080Z
+Texto: L6 N
+Morse: .-.. -.... / -.
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[RX] INSTR · 2026-09-04T15:32:28.880Z
+Texto: R6 ROGER
+Morse: .-. -.... / .-. --- --. . .-.
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[TX] K1MED · 2026-09-04T15:32:37.200Z
+Texto: L7 C
+Morse: .-.. --... / -.-.
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[RX] INSTR · 2026-09-04T15:32:42.640Z
+Texto: R7 ROGER
+Morse: .-. --... / .-. --- --. . .-.
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[TX] K1MED · 2026-09-04T15:32:51.120Z
+Texto: L8 A2
+Morse: .-.. ---.. / .- ..---
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[RX] INSTR · 2026-09-04T15:32:57.680Z
+Texto: R8 ROGER
+Morse: .-. ---.. / .-. --- --. . .-.
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[TX] K1MED · 2026-09-04T15:33:06.320Z
+Texto: L9 DUST
+Morse: .-.. ----. / -.. ..- ... -
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+[RX] INSTR · 2026-09-04T15:33:13.680Z
+Texto: R9 ROGER CASEVAC RECEIVED K
+Morse: .-. ----. / .-. --- --. . .-. / -.-. .- ... . ...- .- -.-. / .-. . -.-. . .. ...- . -.. / -.-
+Configuración: 15 PPM · straight · 600 Hz · sine
+
+Interacción TX/RX
+[RX] INSTR: K1MED DE INSTR SEND 9 LINE K
+[TX] K1MED: INSTR DE K1MED ROGER
+[RX] INSTR: SEND L1 K
+[TX] K1MED: L1 AB12345678
+[RX] INSTR: R1 ROGER
+[TX] K1MED: L2 4650 K1MED
+[RX] INSTR: R2 ROGER
+[TX] K1MED: L3 A1 C1
+[RX] INSTR: R3 ROGER
+[TX] K1MED: L4 A
+[RX] INSTR: R4 ROGER
+[TX] K1MED: L5 L1 A1
+[RX] INSTR: R5 ROGER
+[TX] K1MED: L6 N
+[RX] INSTR: R6 ROGER
+[TX] K1MED: L7 C
+[RX] INSTR: R7 ROGER
+[TX] K1MED: L8 A2
+[RX] INSTR: R8 ROGER
+[TX] K1MED: L9 DUST
+[RX] INSTR: R9 ROGER CASEVAC RECEIVED K

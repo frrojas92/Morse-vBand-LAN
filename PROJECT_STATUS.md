@@ -13,6 +13,7 @@ Morse-vBand-LAN is an offline-first Node.js and Socket.IO application for multi-
 - Browser keyer supporting Iambic A, Iambic B, and straight-key modes.
 - Morse-vBand keyboard mapping: Left Ctrl is DIT and Right Ctrl is DAH.
 - Instructor authentication using `INSTRUCTOR_PIN` from `.env` through Docker Compose.
+- Instructor transmission into one selected channel with the same keyer, sidetone, half-duplex ownership, decoding, and logging path used by students.
 - Instructor room creation, closing, locking, receive-only mode, exercises, transmitter reservation, muting, disconnection, and forced transmitter release.
 - Instructor-enforced WPM, tone frequency, waveform, and optional keyer mode.
 - Sine, triangle, and square tone options. Sine remains the clean default.
@@ -27,7 +28,9 @@ Morse-vBand-LAN is an offline-first Node.js and Socket.IO application for multi-
 - Live CW audio monitoring in the instructor portal, using each channel's configured tone frequency and waveform.
 - Live channel directories in both portals with duplicate-name rejection for instructor-created channels.
 - Downloadable in-memory logs for rooms and individual operators: human-readable TXT transcripts and detailed per-character CSV data.
+- Every TXT download retains its detailed blocks and ends with a compact TX/RX interaction containing only direction, callsign, and decoded text.
 - Simplified black interface using green and red gradient lettering and status accents.
+- Persistent dark/light theme switch in both portals; dark surfaces use pure `#000000`, and the locally bundled Escuela de Telecomunicaciones del Ejército de Chile emblem appears in the upper-right header.
 - Docker image and Compose deployment on TCP port 8080.
 
 ## Important files
